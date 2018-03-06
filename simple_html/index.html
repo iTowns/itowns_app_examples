@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Globe</title>
+    <style type="text/css">
+      html {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        overflow:hidden;
+        height:100%;
+      }
+      #viewerDiv {
+        margin : auto auto;
+        width: 100%;
+        height: 100%;
+        padding: 0;
+      }
+    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  </head>
+  <body>
+    <div id="viewerDiv"></div>
+    <!-- The bundle is also included in itowns npm module -->
+    <!-- So if you install it, you can also point to node_modules/itowns/dist/itowns.js -->
+    <script src="https://github.com/iTowns/itowns/releases/download/v2.3.0/itowns.js"></script>
+    <script>
+      var positionOnGlobe = { longitude: 2.351323, latitude: 48.856712, altitude: 25000000 };
+
+      // iTowns namespace defined here
+      var viewerDiv = document.getElementById('viewerDiv');
+      var globeView = new itowns.GlobeView(viewerDiv, positionOnGlobe);
+
+      function addMesh() {
+        // creation of the new mesh (a cylinder)
+        // in this setup, itowns ships with its own copy of THREE. You can access it like so:
+        var THREE = itowns.THREE;
+        var cylinderHeight = 600000;
+        var geometry = new THREE.CylinderGeometry(0, 100000, cylinderHeight, 8);
+        var material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        var mesh = new THREE.Mesh(geometry, material);
+
+        // get the position on the globe, from the camera
+        var cameraTargetPosition = globeView.controls.getCameraTargetGeoPosition();
+
+        // position of the mesh
+        var meshCoord = cameraTargetPosition;
+        meshCoord.setAltitude(cameraTargetPosition.altitude() + cylinderHeight * 0.5);
+
+        // position and orientation of the mesh
+        mesh.position.copy(meshCoord.as(globeView.referenceCrs).xyz());
+        mesh.lookAt(new THREE.Vector3(0, 0, 0));
+        mesh.rotateX(Math.PI / 2);
+
+        // update coordinate of the mesh
+        mesh.updateMatrixWorld();
+
+        // add the mesh to the scene
+        globeView.scene.add(mesh);
+
+        // make the object usable from outside of the function
+        globeView.mesh = mesh;
+      }
+
+      globeView.addLayer({
+        "type": "color",
+        "protocol": "wmtsc",
+        "networkOptions": { "crossOrigin" : "anonymous" },
+        "id": "OPENSM",
+        "customUrl": "http://osm.oslandia.io/styles/klokantech-basic/%TILEMATRIX/%COL/%ROW.png",
+        "format": "image/png",
+        "options": {
+          "attribution": {
+            "name":"OpenStreetMap",
+            "url": "http://www.openstreetmap.org/"
+          },
+          "tileMatrixSet": "PM",
+          "mimetype": "image/png"
+        }
+      })
+      .then(addMesh)
+      .then(function() { globeView.controls.setTilt(60, true); });
+    </script>
+  </body>
+</html>
